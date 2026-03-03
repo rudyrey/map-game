@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Quiz</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            background: #1a1a2e;
+            color: white;
+            flex-wrap: nowrap;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        #hamburger {
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px 6px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        #hamburger:hover { background: rgba(255,255,255,0.1); }
+
+        #hamburger span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 1px;
+        }
+
+        #menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 199;
+        }
+
+        #menu-overlay.open { display: block; }
+
+        #menu-drawer {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100%;
+            background: #1a1a2e;
+            z-index: 200;
+            transition: left 0.3s;
+            padding: 24px 16px;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        #menu-drawer.open { left: 0; }
+
+        #menu-drawer h2 {
+            color: white;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding: 0 8px;
+        }
+
+        .menu-item {
+            display: block;
+            padding: 12px 16px;
+            color: #bdc3c7;
+            font-size: 17px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .menu-item:hover { background: rgba(255,255,255,0.1); color: white; }
+        .menu-item.active { background: #3498db; color: white; font-weight: bold; }
+
+        .menu-category {
+            padding: 12px 16px 4px;
+            color: #7f8c8d;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 8px;
+        }
+
+        #guess-input {
+            flex: 1;
+            min-width: 180px;
+            padding: 8px 14px;
+            font-size: 15px;
+            font-family: inherit;
+            border: 1.5px solid rgba(255,255,255,0.25);
+            border-radius: 6px;
+            outline: none;
+            background: rgba(255,255,255,0.95);
+            color: #1a1a2e;
+            transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+        }
+
+        #guess-input:focus {
+            border-color: #4fc3f7;
+            box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.3);
+        }
+
+        #guess-input:disabled {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.35);
+            cursor: not-allowed;
+        }
+
+        #guess-input:disabled::placeholder {
+            color: rgba(255,255,255,0.25);
+        }
+
+        .header-stats {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.45);
+            margin-bottom: 3px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value.warning { color: #ff6b6b; }
+
+        .header-divider {
+            width: 1px;
+            height: 28px;
+            background: rgba(255,255,255,0.15);
+            flex-shrink: 0;
+        }
+
+        #start-btn {
+            padding: 8px 22px;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: inherit;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #2ecc71;
+            color: white;
+            transition: background 0.2s, transform 0.1s;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        #start-btn:disabled { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.4); cursor: default; }
+        #start-btn:hover:not(:disabled) { background: #27ae60; transform: translateY(-1px); }
+        #start-btn:active:not(:disabled) { transform: translateY(0); }
+        #start-btn.stop { background: #e74c3c; }
+        #start-btn.stop:hover { background: #c0392b; transform: translateY(-1px); }
+
+        #map-container {
+            display: none;
+            width: 100%;
+            background: #b8d4e3;
+            position: relative;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        #reset-view {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: rgba(44, 62, 80, 0.8);
+            color: white;
+            z-index: 10;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #reset-view:hover { background: rgba(44, 62, 80, 1); }
+
+        #reset-view svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: white;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        #map-container > svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: calc(100vh - 100px);
+        }
+
+        .region {
+            fill: #d5dbdb;
+            stroke: #888;
+            stroke-width: 0.5;
+            transition: fill 0.3s;
+        }
+
+        .region.guessed {
+            fill: #27ae60;
+            stroke: #1e8449;
+        }
+
+        .region.guessed.flash {
+            fill: #2ecc71;
+            filter: drop-shadow(0 0 6px rgba(46, 204, 113, 0.8));
+        }
+
+        .region.excluded {
+            fill: #eee;
+            stroke: #bbb;
+        }
+
+        .region.missed-hover {
+            fill: #e74c3c;
+            stroke: #c0392b;
+            cursor: pointer;
+        }
+
+        .region-tooltip {
+            position: absolute;
+            background: rgba(44, 62, 80, 0.9);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 50;
+            white-space: nowrap;
+            transform: translate(-50%, -100%);
+            margin-top: -8px;
+        }
+
+        /* Progress bar */
+        #progress-bar-container {
+            width: 100%;
+            height: 5px;
+            background: #dfe6e9;
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            transition: width 0.4s ease;
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* Shake animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            15% { transform: translateX(-6px); }
+            30% { transform: translateX(6px); }
+            45% { transform: translateX(-4px); }
+            60% { transform: translateX(4px); }
+            75% { transform: translateX(-2px); }
+            90% { transform: translateX(2px); }
+        }
+
+        #guess-input.shake {
+            animation: shake 0.4s ease;
+            border-color: #e74c3c !important;
+            background: #fde8e8 !important;
+        }
+
+        /* Confetti canvas */
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        #guessed-section {
+            padding: 12px 24px 24px;
+        }
+
+        #guessed-section h3 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: none;
+        }
+
+        #guessed-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 4px 16px;
+        }
+
+        .guessed-name {
+            padding: 3px 8px;
+            font-size: 14px;
+            color: #2c3e50;
+            border-left: 3px solid #27ae60;
+            animation: fadeIn 0.3s;
+        }
+
+        #missed-section {
+            padding: 0 24px 24px;
+            display: none;
+        }
+
+        #missed-section h3 {
+            color: #e74c3c;
+            margin-bottom: 8px;
+        }
+
+        #missed-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 4px 16px;
+        }
+
+        .missed-name {
+            padding: 3px 8px;
+            font-size: 14px;
+            color: #7f8c8d;
+            border-left: 3px solid #e74c3c;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal h2 { margin-bottom: 8px; color: #2c3e50; font-size: 28px; }
+        .modal .final-score { font-size: 56px; font-weight: bold; color: #27ae60; margin: 16px 0; }
+        .modal .modal-message { color: #7f8c8d; margin-bottom: 16px; font-size: 18px; }
+
+        .modal button {
+            padding: 12px 36px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #3498db;
+            color: white;
+            transition: background 0.2s;
+        }
+
+        .modal button:hover { background: #2980b9; }
+
+        #name-entry {
+            display: none;
+            margin-bottom: 16px;
+        }
+
+        #name-entry p {
+            color: #f39c12;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        #name-entry .name-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        #name-input {
+            padding: 8px 12px;
+            font-size: 16px;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            outline: none;
+            width: 180px;
+        }
+
+        #save-btn {
+            padding: 8px 20px;
+            background: #f39c12;
+        }
+
+        #save-btn:hover { background: #e67e22; }
+
+        .leaderboard {
+            margin: 16px 0;
+            text-align: left;
+        }
+
+        .leaderboard h3 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .leaderboard table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .leaderboard th {
+            background: #2c3e50;
+            color: white;
+            padding: 6px 10px;
+            text-align: left;
+        }
+
+        .leaderboard th:first-child { border-radius: 6px 0 0 0; }
+        .leaderboard th:last-child { border-radius: 0 6px 0 0; text-align: right; }
+        .leaderboard th:nth-child(3) { text-align: right; }
+
+        .leaderboard td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .leaderboard td:nth-child(3),
+        .leaderboard td:last-child { text-align: right; }
+
+        .leaderboard tr.highlight td {
+            background: #fef9e7;
+            font-weight: bold;
+        }
+
+        .leaderboard .empty-msg {
+            text-align: center;
+            color: #bdc3c7;
+            padding: 12px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu-overlay" onclick="closeMenu()"></div>
+    <div id="menu-drawer">
+        <h2>Choose a Quiz</h2>
+        <div class="menu-item active" data-game="world" onclick="switchGame('world')">World</div>
+        <div class="menu-category">Continents</div>
+        <div class="menu-item" data-game="northAmerica" onclick="switchGame('northAmerica')">North America</div>
+        <div class="menu-item" data-game="southAmerica" onclick="switchGame('southAmerica')">South America</div>
+        <div class="menu-item" data-game="europe" onclick="switchGame('europe')">Europe</div>
+        <div class="menu-item" data-game="asia" onclick="switchGame('asia')">Asia</div>
+        <div class="menu-item" data-game="africa" onclick="switchGame('africa')">Africa</div>
+        <div class="menu-item" data-game="oceania" onclick="switchGame('oceania')">Oceania</div>
+        <div class="menu-category">Countries</div>
+        <div class="menu-item" data-game="australia" onclick="switchGame('australia')">Australia</div>
+        <div class="menu-item" data-game="brazil" onclick="switchGame('brazil')">Brazil</div>
+        <div class="menu-item" data-game="canada" onclick="switchGame('canada')">Canada</div>
+        <div class="menu-item" data-game="china" onclick="switchGame('china')">China</div>
+        <div class="menu-item" data-game="france" onclick="switchGame('france')">France</div>
+        <div class="menu-item" data-game="germany" onclick="switchGame('germany')">Germany</div>
+        <div class="menu-item" data-game="india" onclick="switchGame('india')">India</div>
+        <div class="menu-item" data-game="italy" onclick="switchGame('italy')">Italy</div>
+        <div class="menu-item" data-game="japan" onclick="switchGame('japan')">Japan</div>
+        <div class="menu-item" data-game="mexico" onclick="switchGame('mexico')">Mexico</div>
+        <div class="menu-item" data-game="russia" onclick="switchGame('russia')">Russia</div>
+        <div class="menu-item" data-game="spain" onclick="switchGame('spain')">Spain</div>
+        <div class="menu-item" data-game="uk" onclick="switchGame('uk')">United Kingdom</div>
+        <div class="menu-item" data-game="usa" onclick="switchGame('usa')">USA</div>
+    </div>
+
+    <div class="header">
+        <button id="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+        <input type="text" id="guess-input" placeholder="Type a country name and press Enter..." disabled autocomplete="off">
+        <div class="header-stats">
+            <div class="stat">
+                <span class="stat-label">Score</span>
+                <span class="stat-value" id="score">0/0</span>
+            </div>
+            <div class="header-divider"></div>
+            <div class="stat">
+                <span class="stat-label">Time</span>
+                <span class="stat-value" id="timer">20:00</span>
+            </div>
+        </div>
+        <button id="start-btn" disabled>Loading...</button>
+    </div>
+
+    <div id="progress-bar-container"><div id="progress-bar"></div></div>
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <div id="map-container">
+        <button id="reset-view" onclick="resetZoom()" title="Reset View"><svg viewBox="0 0 24 24"><path d="M3.5 3.5v6h6"/><path d="M3.5 9.5A9 9 0 1 1 5.6 16"/></svg></button>
+    </div>
+
+    <div id="guessed-section">
+        <h3 id="guessed-header">Guessed Countries</h3>
+        <div id="guessed-list"></div>
+    </div>
+
+    <div id="missed-section">
+        <h3 id="missed-header">Missed Countries</h3>
+        <div id="missed-list"></div>
+    </div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <h2>Game Over!</h2>
+            <div class="final-score" id="final-score">0/0</div>
+            <div class="modal-message" id="modal-message"></div>
+            <div id="name-entry">
+                <p>New top 10 score!</p>
+                <div class="name-row">
+                    <input type="text" id="name-input" placeholder="Enter your name..." maxlength="20" autocomplete="off">
+                    <button id="save-btn" onclick="saveScore()">Save</button>
+                </div>
+            </div>
+            <div class="leaderboard" id="leaderboard"></div>
+            <button onclick="closeModal()">Play Again</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+    <script>
+        // ── Country Data (shared by world + continent quizzes) ──
+        const WORLD_ITEMS = {
+                    "004": { name: "Afghanistan", aliases: [] },
+                    "008": { name: "Albania", aliases: [] },
+                    "012": { name: "Algeria", aliases: [] },
+                    "024": { name: "Angola", aliases: [] },
+                    "032": { name: "Argentina", aliases: [] },
+                    "051": { name: "Armenia", aliases: [] },
+                    "036": { name: "Australia", aliases: [] },
+                    "040": { name: "Austria", aliases: [] },
+                    "031": { name: "Azerbaijan", aliases: [] },
+                    "044": { name: "Bahamas", aliases: ["the bahamas"] },
+                    "050": { name: "Bangladesh", aliases: [] },
+                    "112": { name: "Belarus", aliases: [] },
+                    "056": { name: "Belgium", aliases: [] },
+                    "084": { name: "Belize", aliases: [] },
+                    "204": { name: "Benin", aliases: [] },
+                    "064": { name: "Bhutan", aliases: [] },
+                    "068": { name: "Bolivia", aliases: [] },
+                    "070": { name: "Bosnia and Herzegovina", aliases: ["bosnia", "bosnia herz"] },
+                    "072": { name: "Botswana", aliases: [] },
+                    "076": { name: "Brazil", aliases: ["brasil"] },
+                    "096": { name: "Brunei", aliases: ["brunei darussalam"] },
+                    "100": { name: "Bulgaria", aliases: [] },
+                    "854": { name: "Burkina Faso", aliases: [] },
+                    "108": { name: "Burundi", aliases: [] },
+                    "116": { name: "Cambodia", aliases: ["kampuchea"] },
+                    "120": { name: "Cameroon", aliases: [] },
+                    "124": { name: "Canada", aliases: [] },
+                    "140": { name: "Central African Republic", aliases: ["car"] },
+                    "148": { name: "Chad", aliases: [] },
+                    "152": { name: "Chile", aliases: [] },
+                    "156": { name: "China", aliases: ["prc", "peoples republic of china"] },
+                    "170": { name: "Colombia", aliases: [] },
+                    "178": { name: "Republic of the Congo", aliases: ["congo", "congo republic", "congo brazzaville", "republic of congo"] },
+                    "180": { name: "Democratic Republic of the Congo", aliases: ["dr congo", "drc", "congo kinshasa", "democratic republic of congo"] },
+                    "188": { name: "Costa Rica", aliases: [] },
+                    "384": { name: "Ivory Coast", aliases: ["cote divoire", "cote d ivoire"] },
+                    "191": { name: "Croatia", aliases: ["hrvatska"] },
+                    "192": { name: "Cuba", aliases: [] },
+                    "196": { name: "Cyprus", aliases: [] },
+                    "203": { name: "Czechia", aliases: ["czech republic"] },
+                    "208": { name: "Denmark", aliases: [] },
+                    "262": { name: "Djibouti", aliases: [] },
+                    "214": { name: "Dominican Republic", aliases: [] },
+                    "218": { name: "Ecuador", aliases: [] },
+                    "818": { name: "Egypt", aliases: [] },
+                    "222": { name: "El Salvador", aliases: [] },
+                    "226": { name: "Equatorial Guinea", aliases: [] },
+                    "232": { name: "Eritrea", aliases: [] },
+                    "233": { name: "Estonia", aliases: [] },
+                    "748": { name: "Eswatini", aliases: ["swaziland"] },
+                    "231": { name: "Ethiopia", aliases: [] },
+                    "238": { name: "Falkland Islands", aliases: ["falklands", "malvinas"] },
+                    "242": { name: "Fiji", aliases: [] },
+                    "246": { name: "Finland", aliases: [] },
+                    "250": { name: "France", aliases: [] },
+                    "260": { name: "French Southern Territories", aliases: ["french southern and antarctic lands", "french southern lands"] },
+                    "266": { name: "Gabon", aliases: [] },
+                    "270": { name: "Gambia", aliases: ["the gambia"] },
+                    "268": { name: "Georgia", aliases: [] },
+                    "276": { name: "Germany", aliases: ["deutschland"] },
+                    "288": { name: "Ghana", aliases: [] },
+                    "300": { name: "Greece", aliases: ["hellas"] },
+                    "304": { name: "Greenland", aliases: [] },
+                    "320": { name: "Guatemala", aliases: [] },
+                    "324": { name: "Guinea", aliases: [] },
+                    "624": { name: "Guinea-Bissau", aliases: ["guinea bissau"] },
+                    "328": { name: "Guyana", aliases: [] },
+                    "332": { name: "Haiti", aliases: [] },
+                    "340": { name: "Honduras", aliases: [] },
+                    "348": { name: "Hungary", aliases: [] },
+                    "352": { name: "Iceland", aliases: [] },
+                    "356": { name: "India", aliases: [] },
+                    "360": { name: "Indonesia", aliases: [] },
+                    "364": { name: "Iran", aliases: ["islamic republic of iran"] },
+                    "368": { name: "Iraq", aliases: [] },
+                    "372": { name: "Ireland", aliases: ["republic of ireland", "eire"] },
+                    "376": { name: "Israel", aliases: [] },
+                    "380": { name: "Italy", aliases: ["italia"] },
+                    "388": { name: "Jamaica", aliases: [] },
+                    "392": { name: "Japan", aliases: [] },
+                    "400": { name: "Jordan", aliases: [] },
+                    "398": { name: "Kazakhstan", aliases: [] },
+                    "404": { name: "Kenya", aliases: [] },
+                    "408": { name: "North Korea", aliases: ["dprk"] },
+                    "410": { name: "South Korea", aliases: ["korea", "republic of korea"] },
+                    "414": { name: "Kuwait", aliases: [] },
+                    "417": { name: "Kyrgyzstan", aliases: [] },
+                    "418": { name: "Laos", aliases: ["lao"] },
+                    "428": { name: "Latvia", aliases: [] },
+                    "422": { name: "Lebanon", aliases: [] },
+                    "426": { name: "Lesotho", aliases: [] },
+                    "430": { name: "Liberia", aliases: [] },
+                    "434": { name: "Libya", aliases: [] },
+                    "440": { name: "Lithuania", aliases: [] },
+                    "442": { name: "Luxembourg", aliases: [] },
+                    "450": { name: "Madagascar", aliases: [] },
+                    "454": { name: "Malawi", aliases: [] },
+                    "458": { name: "Malaysia", aliases: [] },
+                    "466": { name: "Mali", aliases: [] },
+                    "478": { name: "Mauritania", aliases: [] },
+                    "484": { name: "Mexico", aliases: [] },
+                    "498": { name: "Moldova", aliases: ["republic of moldova"] },
+                    "496": { name: "Mongolia", aliases: [] },
+                    "499": { name: "Montenegro", aliases: [] },
+                    "504": { name: "Morocco", aliases: [] },
+                    "508": { name: "Mozambique", aliases: [] },
+                    "104": { name: "Myanmar", aliases: ["burma"] },
+                    "516": { name: "Namibia", aliases: [] },
+                    "524": { name: "Nepal", aliases: [] },
+                    "528": { name: "Netherlands", aliases: ["holland", "the netherlands"] },
+                    "540": { name: "New Caledonia", aliases: [] },
+                    "554": { name: "New Zealand", aliases: ["aotearoa"] },
+                    "558": { name: "Nicaragua", aliases: [] },
+                    "562": { name: "Niger", aliases: [] },
+                    "566": { name: "Nigeria", aliases: [] },
+                    "578": { name: "Norway", aliases: [] },
+                    "512": { name: "Oman", aliases: [] },
+                    "586": { name: "Pakistan", aliases: [] },
+                    "275": { name: "Palestine", aliases: ["west bank", "palestinian territories"] },
+                    "591": { name: "Panama", aliases: [] },
+                    "598": { name: "Papua New Guinea", aliases: ["png"] },
+                    "600": { name: "Paraguay", aliases: [] },
+                    "604": { name: "Peru", aliases: [] },
+                    "608": { name: "Philippines", aliases: ["the philippines"] },
+                    "616": { name: "Poland", aliases: ["polska"] },
+                    "620": { name: "Portugal", aliases: [] },
+                    "630": { name: "Puerto Rico", aliases: [] },
+                    "634": { name: "Qatar", aliases: [] },
+                    "642": { name: "Romania", aliases: [] },
+                    "643": { name: "Russia", aliases: ["russian federation"] },
+                    "646": { name: "Rwanda", aliases: [] },
+                    "682": { name: "Saudi Arabia", aliases: ["ksa"] },
+                    "686": { name: "Senegal", aliases: [] },
+                    "688": { name: "Serbia", aliases: [] },
+                    "694": { name: "Sierra Leone", aliases: [] },
+                    "703": { name: "Slovakia", aliases: [] },
+                    "705": { name: "Slovenia", aliases: [] },
+                    "090": { name: "Solomon Islands", aliases: [] },
+                    "706": { name: "Somalia", aliases: [] },
+                    "710": { name: "South Africa", aliases: ["rsa"] },
+                    "728": { name: "South Sudan", aliases: [] },
+                    "724": { name: "Spain", aliases: [] },
+                    "144": { name: "Sri Lanka", aliases: ["ceylon"] },
+                    "729": { name: "Sudan", aliases: [] },
+                    "740": { name: "Suriname", aliases: [] },
+                    "752": { name: "Sweden", aliases: ["sverige"] },
+                    "756": { name: "Switzerland", aliases: ["schweiz", "suisse"] },
+                    "760": { name: "Syria", aliases: ["syrian arab republic"] },
+                    "158": { name: "Taiwan", aliases: ["chinese taipei", "republic of china"] },
+                    "762": { name: "Tajikistan", aliases: [] },
+                    "834": { name: "Tanzania", aliases: ["united republic of tanzania"] },
+                    "764": { name: "Thailand", aliases: [] },
+                    "626": { name: "East Timor", aliases: ["timor leste", "timor-leste"] },
+                    "768": { name: "Togo", aliases: [] },
+                    "780": { name: "Trinidad and Tobago", aliases: ["trinidad"] },
+                    "788": { name: "Tunisia", aliases: [] },
+                    "792": { name: "Turkey", aliases: ["turkiye"] },
+                    "795": { name: "Turkmenistan", aliases: [] },
+                    "800": { name: "Uganda", aliases: [] },
+                    "804": { name: "Ukraine", aliases: [] },
+                    "784": { name: "United Arab Emirates", aliases: ["uae", "emirates"] },
+                    "826": { name: "United Kingdom", aliases: ["uk", "great britain", "britain"] },
+                    "840": { name: "United States", aliases: ["usa", "us", "united states of america", "america"] },
+                    "858": { name: "Uruguay", aliases: [] },
+                    "860": { name: "Uzbekistan", aliases: [] },
+                    "548": { name: "Vanuatu", aliases: [] },
+                    "862": { name: "Venezuela", aliases: [] },
+                    "704": { name: "Vietnam", aliases: ["viet nam"] },
+                    "732": { name: "Western Sahara", aliases: [] },
+                    "887": { name: "Yemen", aliases: [] },
+                    "894": { name: "Zambia", aliases: [] },
+                    "716": { name: "Zimbabwe", aliases: [] },
+                    "807": { name: "North Macedonia", aliases: ["macedonia", "fyrom"] },
+                    "010": { name: "Antarctica", aliases: [] },
+                    "-99": { name: "Kosovo", aliases: [] },
+                    "174": { name: "Comoros", aliases: [] }
+        };
+
+        // ── Canada Items (Highcharts IDs) ──
+        const CANADA_ITEMS = {
+            "CA.BC": { name: "British Columbia", aliases: ["bc"] },
+            "CA.AB": { name: "Alberta", aliases: ["ab"] },
+            "CA.SK": { name: "Saskatchewan", aliases: ["sk", "sask"] },
+            "CA.MB": { name: "Manitoba", aliases: ["mb"] },
+            "CA.ON": { name: "Ontario", aliases: ["on", "ont"] },
+            "CA.QC": { name: "Quebec", aliases: ["qc", "que", "québec"] },
+            "CA.NB": { name: "New Brunswick", aliases: ["nb"] },
+            "CA.NS": { name: "Nova Scotia", aliases: ["ns"] },
+            "CA.PE": { name: "Prince Edward Island", aliases: ["pe", "pei"] },
+            "CA.NL": { name: "Newfoundland and Labrador", aliases: ["nl", "newfoundland", "nfld"] },
+            "CA.YT": { name: "Yukon", aliases: ["yt", "yukon territory"] },
+            "CA.NT": { name: "Northwest Territories", aliases: ["nt", "nwt"] },
+            "CA.NU": { name: "Nunavut", aliases: ["nu"] }
+        };
+
+        // ── Australia Items (Highcharts IDs) ──
+        const AUSTRALIA_ITEMS = {
+            "AU.NSW": { name: "New South Wales", aliases: ["nsw"] },
+            "AU.VIC": { name: "Victoria", aliases: ["vic"] },
+            "AU.QLD": { name: "Queensland", aliases: ["qld"] },
+            "AU.SA": { name: "South Australia", aliases: ["sa"] },
+            "AU.WA": { name: "Western Australia", aliases: ["wa"] },
+            "AU.TAS": { name: "Tasmania", aliases: ["tas"] },
+            "AU.NT": { name: "Northern Territory", aliases: ["nt"] },
+            "AU.ACT": { name: "Australian Capital Territory", aliases: ["act", "canberra"] },
+            "AU.NF": { name: "Norfolk Island", aliases: [] },
+            "AU.JB": { name: "Jervis Bay Territory", aliases: ["jervis bay"] }
+        };
+
+        // ── Brazil Items (Highcharts IDs) ──
+        const BRAZIL_ITEMS = {
+            "BR.AC": { name: "Acre", aliases: [] },
+            "BR.AL": { name: "Alagoas", aliases: [] },
+            "BR.AP": { name: "Amapá", aliases: ["amapa"] },
+            "BR.AM": { name: "Amazonas", aliases: [] },
+            "BR.BA": { name: "Bahia", aliases: [] },
+            "BR.CE": { name: "Ceará", aliases: ["ceara"] },
+            "BR.DF": { name: "Distrito Federal", aliases: ["federal district", "brasilia", "brasília"] },
+            "BR.ES": { name: "Espírito Santo", aliases: ["espirito santo"] },
+            "BR.GO": { name: "Goiás", aliases: ["goias"] },
+            "BR.MA": { name: "Maranhão", aliases: ["maranhao"] },
+            "BR.MT": { name: "Mato Grosso", aliases: [] },
+            "BR.MS": { name: "Mato Grosso do Sul", aliases: [] },
+            "BR.MG": { name: "Minas Gerais", aliases: [] },
+            "BR.PA": { name: "Pará", aliases: ["para"] },
+            "BR.PB": { name: "Paraíba", aliases: ["paraiba"] },
+            "BR.PR": { name: "Paraná", aliases: ["parana"] },
+            "BR.PE": { name: "Pernambuco", aliases: [] },
+            "BR.PI": { name: "Piauí", aliases: ["piaui"] },
+            "BR.RJ": { name: "Rio de Janeiro", aliases: [] },
+            "BR.RN": { name: "Rio Grande do Norte", aliases: [] },
+            "BR.RS": { name: "Rio Grande do Sul", aliases: [] },
+            "BR.RO": { name: "Rondônia", aliases: ["rondonia"] },
+            "BR.RR": { name: "Roraima", aliases: [] },
+            "BR.SC": { name: "Santa Catarina", aliases: [] },
+            "BR.SP": { name: "São Paulo", aliases: ["sao paulo"] },
+            "BR.SE": { name: "Sergipe", aliases: [] },
+            "BR.TO": { name: "Tocantins", aliases: [] }
+        };
+
+        // ── Mexico Items (Highcharts IDs) ──
+        const MEXICO_ITEMS = {
+            "MX.AG": { name: "Aguascalientes", aliases: [] },
+            "MX.BC": { name: "Baja California", aliases: [] },
+            "MX.BS": { name: "Baja California Sur", aliases: [] },
+            "MX.CM": { name: "Campeche", aliases: [] },
+            "MX.CS": { name: "Chiapas", aliases: [] },
+            "MX.CH": { name: "Chihuahua", aliases: [] },
+            "MX.CO": { name: "Coahuila", aliases: ["coahuila de zaragoza"] },
+            "MX.CL": { name: "Colima", aliases: [] },
+            "MX.DG": { name: "Durango", aliases: [] },
+            "MX.GJ": { name: "Guanajuato", aliases: [] },
+            "MX.GR": { name: "Guerrero", aliases: [] },
+            "MX.HG": { name: "Hidalgo", aliases: [] },
+            "MX.JA": { name: "Jalisco", aliases: [] },
+            "MX.MX": { name: "México", aliases: ["mexico", "state of mexico", "estado de mexico"] },
+            "MX.MI": { name: "Michoacán", aliases: ["michoacan"] },
+            "MX.MO": { name: "Morelos", aliases: [] },
+            "MX.NA": { name: "Nayarit", aliases: [] },
+            "MX.NL": { name: "Nuevo León", aliases: ["nuevo leon"] },
+            "MX.OA": { name: "Oaxaca", aliases: [] },
+            "MX.PU": { name: "Puebla", aliases: [] },
+            "MX.QT": { name: "Querétaro", aliases: ["queretaro"] },
+            "MX.QR": { name: "Quintana Roo", aliases: [] },
+            "MX.SL": { name: "San Luis Potosí", aliases: ["san luis potosi"] },
+            "MX.SI": { name: "Sinaloa", aliases: [] },
+            "MX.SO": { name: "Sonora", aliases: [] },
+            "MX.TB": { name: "Tabasco", aliases: [] },
+            "MX.TM": { name: "Tamaulipas", aliases: [] },
+            "MX.TL": { name: "Tlaxcala", aliases: [] },
+            "MX.VE": { name: "Veracruz", aliases: [] },
+            "MX.YU": { name: "Yucatán", aliases: ["yucatan"] },
+            "MX.ZA": { name: "Zacatecas", aliases: [] },
+            "MX.DF": { name: "Ciudad de México", aliases: ["ciudad de mexico", "mexico city", "cdmx", "distrito federal"] }
+        };
+
+        // ── Germany Items (AliceWi IDs — AGS 2-digit codes) ──
+        const GERMANY_ITEMS = {
+            "01": { name: "Schleswig-Holstein", aliases: ["schleswig holstein"] },
+            "02": { name: "Hamburg", aliases: [] },
+            "03": { name: "Lower Saxony", aliases: ["niedersachsen"] },
+            "04": { name: "Bremen", aliases: [] },
+            "05": { name: "North Rhine-Westphalia", aliases: ["north rhine westphalia", "nordrhein-westfalen", "nordrhein westfalen", "nrw"] },
+            "06": { name: "Hesse", aliases: ["hessen"] },
+            "07": { name: "Rhineland-Palatinate", aliases: ["rhineland palatinate", "rheinland-pfalz", "rheinland pfalz"] },
+            "08": { name: "Baden-Württemberg", aliases: ["baden wurttemberg", "baden-wuerttemberg", "bw"] },
+            "09": { name: "Bavaria", aliases: ["bayern"] },
+            "10": { name: "Saarland", aliases: [] },
+            "11": { name: "Berlin", aliases: [] },
+            "12": { name: "Brandenburg", aliases: [] },
+            "13": { name: "Mecklenburg-Vorpommern", aliases: ["mecklenburg vorpommern", "mecklenburg western pomerania"] },
+            "14": { name: "Saxony", aliases: ["sachsen"] },
+            "15": { name: "Saxony-Anhalt", aliases: ["saxony anhalt", "sachsen-anhalt", "sachsen anhalt"] },
+            "16": { name: "Thuringia", aliases: ["thuringen", "thüringen"] }
+        };
+
+        // ── France Items (Highcharts IDs) ──
+        const FRANCE_ITEMS = {
+            "FR.ARA": { name: "Auvergne-Rhône-Alpes", aliases: ["auvergne rhone alpes", "auvergne-rhone-alpes"] },
+            "FR.BFC": { name: "Bourgogne-Franche-Comté", aliases: ["bourgogne franche comte", "bourgogne-franche-comte", "burgundy"] },
+            "FR.BRE": { name: "Bretagne", aliases: ["brittany"] },
+            "FR.CVL": { name: "Centre-Val de Loire", aliases: ["centre val de loire", "centre"] },
+            "FR.COR": { name: "Corse", aliases: ["corsica"] },
+            "FR.GES": { name: "Grand Est", aliases: [] },
+            "FR.HDF": { name: "Hauts-de-France", aliases: ["hauts de france"] },
+            "FR.IDF": { name: "Île-de-France", aliases: ["ile de france", "ile-de-france", "paris region"] },
+            "FR.NOR": { name: "Normandie", aliases: ["normandy"] },
+            "FR.NAQ": { name: "Nouvelle-Aquitaine", aliases: ["nouvelle aquitaine"] },
+            "FR.OCC": { name: "Occitanie", aliases: ["occitania"] },
+            "FR.PDL": { name: "Pays de la Loire", aliases: [] },
+            "FR.PAC": { name: "Provence-Alpes-Côte d'Azur", aliases: ["provence alpes cote dazur", "provence-alpes-cote dazur", "paca"] },
+            "FR.GUA": { name: "Guadeloupe", aliases: [] },
+            "FR.LRE": { name: "La Réunion", aliases: ["la reunion", "reunion"] },
+            "FR.MQ": { name: "Martinique", aliases: [] },
+            "FR.GF": { name: "Guyane", aliases: ["french guiana", "guyane francaise"] },
+            "FR.MAY": { name: "Mayotte", aliases: [] }
+        };
+
+        // ── Italy Items (openpolis — reg_istat_code) ──
+        const ITALY_ITEMS = {
+            "01": { name: "Piedmont", aliases: ["piemonte"] },
+            "02": { name: "Aosta Valley", aliases: ["valle daosta", "valle d aosta", "val daosta", "aosta"] },
+            "03": { name: "Lombardy", aliases: ["lombardia"] },
+            "04": { name: "Trentino-Alto Adige", aliases: ["trentino alto adige", "trentino", "south tyrol", "sudtirol"] },
+            "05": { name: "Veneto", aliases: [] },
+            "06": { name: "Friuli Venezia Giulia", aliases: ["friuli"] },
+            "07": { name: "Liguria", aliases: [] },
+            "08": { name: "Emilia-Romagna", aliases: ["emilia romagna"] },
+            "09": { name: "Tuscany", aliases: ["toscana"] },
+            "10": { name: "Umbria", aliases: [] },
+            "11": { name: "Marche", aliases: ["the marches"] },
+            "12": { name: "Lazio", aliases: ["latium"] },
+            "13": { name: "Abruzzo", aliases: [] },
+            "14": { name: "Molise", aliases: [] },
+            "15": { name: "Campania", aliases: [] },
+            "16": { name: "Apulia", aliases: ["puglia"] },
+            "17": { name: "Basilicata", aliases: ["lucania"] },
+            "18": { name: "Calabria", aliases: [] },
+            "19": { name: "Sicily", aliases: ["sicilia"] },
+            "20": { name: "Sardinia", aliases: ["sardegna"] }
+        };
+
+        // ── Spain Items (es-atlas — INE numeric codes) ──
+        const SPAIN_ITEMS = {
+            "01": { name: "Andalusia", aliases: ["andalucia", "andalucía"] },
+            "02": { name: "Aragon", aliases: ["aragón", "aragon"] },
+            "03": { name: "Asturias", aliases: ["principado de asturias", "principality of asturias"] },
+            "04": { name: "Balearic Islands", aliases: ["baleares", "illes balears", "islas baleares", "mallorca"] },
+            "05": { name: "Canary Islands", aliases: ["canarias", "islas canarias"] },
+            "06": { name: "Cantabria", aliases: [] },
+            "07": { name: "Castile and León", aliases: ["castile and leon", "castilla y leon", "castilla y león"] },
+            "08": { name: "Castile-La Mancha", aliases: ["castile la mancha", "castilla la mancha", "castilla-la mancha"] },
+            "09": { name: "Catalonia", aliases: ["cataluña", "catalunya", "cataluna"] },
+            "10": { name: "Extremadura", aliases: [] },
+            "11": { name: "Galicia", aliases: [] },
+            "12": { name: "La Rioja", aliases: ["rioja"] },
+            "13": { name: "Community of Madrid", aliases: ["madrid", "comunidad de madrid"] },
+            "14": { name: "Murcia", aliases: ["region de murcia", "región de murcia"] },
+            "15": { name: "Navarre", aliases: ["navarra", "comunidad foral de navarra"] },
+            "16": { name: "Basque Country", aliases: ["pais vasco", "país vasco", "euskadi"] },
+            "17": { name: "Valencian Community", aliases: ["valencia", "comunidad valenciana", "comunitat valenciana"] },
+            "18": { name: "Ceuta", aliases: [] },
+            "19": { name: "Melilla", aliases: [] }
+        };
+
+        // ── UK Items (ONSvisual — AREACD codes) ──
+        const UK_ITEMS = {
+            "E92000001": { name: "England", aliases: [] },
+            "N92000002": { name: "Northern Ireland", aliases: ["n ireland"] },
+            "S92000003": { name: "Scotland", aliases: [] },
+            "W92000004": { name: "Wales", aliases: ["cymru"] }
+        };
+
+        // ── India Items (geometry id = state name) ──
+        const INDIA_ITEMS = {
+            "Andhra Pradesh": { name: "Andhra Pradesh", aliases: ["ap"] },
+            "Arunachal Pradesh": { name: "Arunachal Pradesh", aliases: [] },
+            "Assam": { name: "Assam", aliases: [] },
+            "Bihar": { name: "Bihar", aliases: [] },
+            "Chhattisgarh": { name: "Chhattisgarh", aliases: ["chattisgarh"] },
+            "Goa": { name: "Goa", aliases: [] },
+            "Gujarat": { name: "Gujarat", aliases: [] },
+            "Haryana": { name: "Haryana", aliases: [] },
+            "Himachal Pradesh": { name: "Himachal Pradesh", aliases: ["hp"] },
+            "Jharkhand": { name: "Jharkhand", aliases: ["jharkand"] },
+            "Karnataka": { name: "Karnataka", aliases: ["mysore"] },
+            "Kerala": { name: "Kerala", aliases: [] },
+            "Madhya Pradesh": { name: "Madhya Pradesh", aliases: ["mp"] },
+            "Maharashtra": { name: "Maharashtra", aliases: [] },
+            "Manipur": { name: "Manipur", aliases: [] },
+            "Meghalaya": { name: "Meghalaya", aliases: [] },
+            "Mizoram": { name: "Mizoram", aliases: [] },
+            "Nagaland": { name: "Nagaland", aliases: [] },
+            "Odisha": { name: "Odisha", aliases: ["orissa"] },
+            "Punjab": { name: "Punjab", aliases: [] },
+            "Rajasthan": { name: "Rajasthan", aliases: [] },
+            "Sikkim": { name: "Sikkim", aliases: [] },
+            "Tamil Nadu": { name: "Tamil Nadu", aliases: ["tn"] },
+            "Telangana": { name: "Telangana", aliases: [] },
+            "Tripura": { name: "Tripura", aliases: [] },
+            "Uttar Pradesh": { name: "Uttar Pradesh", aliases: ["up"] },
+            "Uttarakhand": { name: "Uttarakhand", aliases: ["uttaranchal"] },
+            "West Bengal": { name: "West Bengal", aliases: ["wb"] },
+            "Andaman and Nicobar Islands": { name: "Andaman and Nicobar Islands", aliases: ["andaman nicobar", "andaman & nicobar island", "andaman and nicobar"] },
+            "Chandigarh": { name: "Chandigarh", aliases: [] },
+            "Dadra and Nagar Haveli and Daman and Diu": { name: "Dadra and Nagar Haveli and Daman and Diu", aliases: ["dadra nagar haveli", "daman diu", "dadra and nagar haveli and daman and diu"] },
+            "Delhi": { name: "Delhi", aliases: ["new delhi", "nct of delhi"] },
+            "Jammu and Kashmir": { name: "Jammu and Kashmir", aliases: ["jk", "j&k", "jammu & kashmir", "jammu kashmir"] },
+            "Ladakh": { name: "Ladakh", aliases: [] },
+            "Lakshadweep": { name: "Lakshadweep", aliases: [] },
+            "Puducherry": { name: "Puducherry", aliases: ["pondicherry"] }
+        };
+
+        // ── Japan Items (Highcharts IDs) ──
+        const JAPAN_ITEMS = {
+            "JP.HS": { name: "Hiroshima", aliases: [] },
+            "JP.SM": { name: "Shimane", aliases: [] },
+            "JP.TT": { name: "Tottori", aliases: [] },
+            "JP.OY": { name: "Okayama", aliases: [] },
+            "JP.YC": { name: "Yamaguchi", aliases: [] },
+            "JP.KG": { name: "Kagawa", aliases: [] },
+            "JP.EH": { name: "Ehime", aliases: [] },
+            "JP.TS": { name: "Tokushima", aliases: [] },
+            "JP.KC": { name: "Kochi", aliases: [] },
+            "JP.FO": { name: "Fukuoka", aliases: [] },
+            "JP.SG": { name: "Saga", aliases: [] },
+            "JP.3461": { name: "Nagasaki", aliases: [] },
+            "JP.KM": { name: "Kumamoto", aliases: [] },
+            "JP.OT": { name: "Oita", aliases: [] },
+            "JP.MZ": { name: "Miyazaki", aliases: [] },
+            "JP.3457": { name: "Kagoshima", aliases: [] },
+            "JP.3302": { name: "Okinawa", aliases: [] },
+            "JP.HK": { name: "Hokkaido", aliases: [] },
+            "JP.AO": { name: "Aomori", aliases: [] },
+            "JP.IW": { name: "Iwate", aliases: [] },
+            "JP.MG": { name: "Miyagi", aliases: [] },
+            "JP.AK": { name: "Akita", aliases: [] },
+            "JP.YT": { name: "Yamagata", aliases: [] },
+            "JP.FS": { name: "Fukushima", aliases: [] },
+            "JP.IB": { name: "Ibaraki", aliases: [] },
+            "JP.TC": { name: "Tochigi", aliases: [] },
+            "JP.3480": { name: "Gunma", aliases: ["gumma"] },
+            "JP.ST": { name: "Saitama", aliases: [] },
+            "JP.CH": { name: "Chiba", aliases: [] },
+            "JP.TK": { name: "Tokyo", aliases: [] },
+            "JP.KN": { name: "Kanagawa", aliases: [] },
+            "JP.NI": { name: "Niigata", aliases: [] },
+            "JP.TY": { name: "Toyama", aliases: [] },
+            "JP.IS": { name: "Ishikawa", aliases: [] },
+            "JP.FI": { name: "Fukui", aliases: [] },
+            "JP.YN": { name: "Yamanashi", aliases: [] },
+            "JP.NN": { name: "Nagano", aliases: [] },
+            "JP.GF": { name: "Gifu", aliases: [] },
+            "JP.SZ": { name: "Shizuoka", aliases: [] },
+            "JP.AI": { name: "Aichi", aliases: [] },
+            "JP.ME": { name: "Mie", aliases: [] },
+            "JP.SH": { name: "Shiga", aliases: [] },
+            "JP.KY": { name: "Kyoto", aliases: [] },
+            "JP.OS": { name: "Osaka", aliases: [] },
+            "JP.HG": { name: "Hyogo", aliases: ["hyōgo"] },
+            "JP.NR": { name: "Nara", aliases: [] },
+            "JP.WK": { name: "Wakayama", aliases: [] }
+        };
+
+        // ── China Items (cn-atlas — properties.id codes) ──
+        const CHINA_ITEMS = {
+            "110000": { name: "Beijing", aliases: ["peking"] },
+            "120000": { name: "Tianjin", aliases: [] },
+            "130000": { name: "Hebei", aliases: [] },
+            "140000": { name: "Shanxi", aliases: [] },
+            "150000": { name: "Inner Mongolia", aliases: ["nei mongol", "inner mongolia autonomous region"] },
+            "210000": { name: "Liaoning", aliases: [] },
+            "220000": { name: "Jilin", aliases: [] },
+            "230000": { name: "Heilongjiang", aliases: [] },
+            "310000": { name: "Shanghai", aliases: [] },
+            "320000": { name: "Jiangsu", aliases: [] },
+            "330000": { name: "Zhejiang", aliases: [] },
+            "340000": { name: "Anhui", aliases: [] },
+            "350000": { name: "Fujian", aliases: [] },
+            "360000": { name: "Jiangxi", aliases: [] },
+            "370000": { name: "Shandong", aliases: [] },
+            "410000": { name: "Henan", aliases: [] },
+            "420000": { name: "Hubei", aliases: [] },
+            "430000": { name: "Hunan", aliases: [] },
+            "440000": { name: "Guangdong", aliases: ["canton"] },
+            "450000": { name: "Guangxi", aliases: ["guangxi zhuang autonomous region"] },
+            "460000": { name: "Hainan", aliases: [] },
+            "500000": { name: "Chongqing", aliases: [] },
+            "510000": { name: "Sichuan", aliases: ["szechuan", "szechwan"] },
+            "520000": { name: "Guizhou", aliases: [] },
+            "530000": { name: "Yunnan", aliases: [] },
+            "540000": { name: "Tibet", aliases: ["xizang", "tibet autonomous region"] },
+            "610000": { name: "Shaanxi", aliases: [] },
+            "620000": { name: "Gansu", aliases: [] },
+            "630000": { name: "Qinghai", aliases: [] },
+            "640000": { name: "Ningxia", aliases: ["ningxia hui autonomous region"] },
+            "650000": { name: "Xinjiang", aliases: ["xinjiang uyghur autonomous region"] },
+            "710000": { name: "Taiwan", aliases: [] },
+            "810000": { name: "Hong Kong", aliases: ["hk"] },
+            "820000": { name: "Macau", aliases: ["macao"] }
+        };
+
+        // ── Russia Items (Highcharts IDs) ──
+        const RUSSIA_ITEMS = {
+            "RU.AD": { name: "Adygea", aliases: ["republic of adygea", "adygey"] },
+            "RU.AL": { name: "Altai Republic", aliases: ["altai", "altay"] },
+            "RU.AM": { name: "Amur Oblast", aliases: ["amur"] },
+            "RU.AR": { name: "Arkhangelsk Oblast", aliases: ["arkhangelsk", "archangelsk"] },
+            "RU.AS": { name: "Astrakhan Oblast", aliases: ["astrakhan"] },
+            "RU.BK": { name: "Bashkortostan", aliases: ["bashkiria"] },
+            "RU.BL": { name: "Belgorod Oblast", aliases: ["belgorod"] },
+            "RU.BR": { name: "Bryansk Oblast", aliases: ["bryansk"] },
+            "RU.BU": { name: "Buryatia", aliases: ["buryat republic", "buryat"] },
+            "RU.CN": { name: "Chechnya", aliases: ["chechen republic"] },
+            "RU.CL": { name: "Chelyabinsk Oblast", aliases: ["chelyabinsk"] },
+            "RU.CK": { name: "Chukotka", aliases: ["chukotka autonomous okrug", "chukchi autonomous okrug"] },
+            "RU.CV": { name: "Chuvashia", aliases: ["chuvash republic", "chuvash"] },
+            "RU.DA": { name: "Dagestan", aliases: ["republic of dagestan"] },
+            "RU.GA": { name: "Altai Krai", aliases: ["gorno-altay", "gorno altay"] },
+            "RU.IN": { name: "Ingushetia", aliases: ["republic of ingushetia", "ingush"] },
+            "RU.IR": { name: "Irkutsk Oblast", aliases: ["irkutsk"] },
+            "RU.IV": { name: "Ivanovo Oblast", aliases: ["ivanovo"] },
+            "RU.YV": { name: "Jewish Autonomous Oblast", aliases: ["jewish ao", "birobidzhan", "yevrey"] },
+            "RU.KB": { name: "Kabardino-Balkaria", aliases: ["kabardino balkaria", "kabardin-balkar"] },
+            "RU.KN": { name: "Kaliningrad Oblast", aliases: ["kaliningrad"] },
+            "RU.KL": { name: "Kalmykia", aliases: ["republic of kalmykia", "kalmyk"] },
+            "RU.KG": { name: "Kaluga Oblast", aliases: ["kaluga"] },
+            "RU.KA": { name: "Kamchatka Krai", aliases: ["kamchatka"] },
+            "RU.KC": { name: "Karachay-Cherkessia", aliases: ["karachay cherkessia", "karachay-cherkess"] },
+            "RU.KI": { name: "Republic of Karelia", aliases: ["karelia"] },
+            "RU.KE": { name: "Kemerovo Oblast", aliases: ["kemerovo", "kuzbass"] },
+            "RU.KH": { name: "Khabarovsk Krai", aliases: ["khabarovsk"] },
+            "RU.KK": { name: "Khakassia", aliases: ["republic of khakassia", "khakass"] },
+            "RU.KM": { name: "Khanty-Mansi Autonomous Okrug", aliases: ["khanty mansi", "khanty-mansiysk", "yugra", "khanty-mansiy"] },
+            "RU.KV": { name: "Kirov Oblast", aliases: ["kirov"] },
+            "RU.KO": { name: "Komi Republic", aliases: ["komi"] },
+            "RU.KT": { name: "Kostroma Oblast", aliases: ["kostroma"] },
+            "RU.KD": { name: "Krasnodar Krai", aliases: ["krasnodar"] },
+            "RU.KY": { name: "Krasnoyarsk Krai", aliases: ["krasnoyarsk"] },
+            "RU.KU": { name: "Kurgan Oblast", aliases: ["kurgan"] },
+            "RU.KS": { name: "Kursk Oblast", aliases: ["kursk"] },
+            "RU.LN": { name: "Leningrad Oblast", aliases: ["leningrad"] },
+            "RU.LP": { name: "Lipetsk Oblast", aliases: ["lipetsk"] },
+            "RU.MG": { name: "Magadan Oblast", aliases: ["magadan", "maga buryatdan"] },
+            "RU.ME": { name: "Mari El", aliases: ["republic of mari el", "mariy-el"] },
+            "RU.MR": { name: "Mordovia", aliases: ["republic of mordovia"] },
+            "RU.MS": { name: "Moscow Oblast", aliases: ["moscow region", "moskovskaya", "moskovsskaya"] },
+            "RU.2510": { name: "Moscow", aliases: ["moscow city", "moskva"] },
+            "RU.MM": { name: "Murmansk Oblast", aliases: ["murmansk"] },
+            "RU.NN": { name: "Nenets Autonomous Okrug", aliases: ["nenets", "nao"] },
+            "RU.NZ": { name: "Nizhny Novgorod Oblast", aliases: ["nizhny novgorod", "nizhegorod"] },
+            "RU.NG": { name: "Novgorod Oblast", aliases: ["novgorod"] },
+            "RU.NS": { name: "Novosibirsk Oblast", aliases: ["novosibirsk"] },
+            "RU.OM": { name: "Omsk Oblast", aliases: ["omsk"] },
+            "RU.OB": { name: "Orenburg Oblast", aliases: ["orenburg"] },
+            "RU.OL": { name: "Oryol Oblast", aliases: ["oryol", "orel"] },
+            "RU.PZ": { name: "Penza Oblast", aliases: ["penza"] },
+            "RU.PE": { name: "Perm Krai", aliases: ["perm"] },
+            "RU.PR": { name: "Primorsky Krai", aliases: ["primorsky", "primorye"] },
+            "RU.PS": { name: "Pskov Oblast", aliases: ["pskov"] },
+            "RU.RO": { name: "Rostov Oblast", aliases: ["rostov"] },
+            "RU.RZ": { name: "Ryazan Oblast", aliases: ["ryazan"] },
+            "RU.SK": { name: "Sakha Republic", aliases: ["sakha", "yakutia"] },
+            "RU.SL": { name: "Sakhalin Oblast", aliases: ["sakhalin"] },
+            "RU.SA": { name: "Samara Oblast", aliases: ["samara"] },
+            "RU.SP": { name: "Saint Petersburg", aliases: ["st petersburg", "saint-petersburg", "petersburg"] },
+            "RU.SR": { name: "Saratov Oblast", aliases: ["saratov"] },
+            "RU.NO": { name: "North Ossetia-Alania", aliases: ["north ossetia", "north ossetia alania"] },
+            "RU.SM": { name: "Smolensk Oblast", aliases: ["smolensk"] },
+            "RU.ST": { name: "Stavropol Krai", aliases: ["stavropol"] },
+            "RU.SV": { name: "Sverdlovsk Oblast", aliases: ["sverdlovsk", "yekaterinburg region"] },
+            "RU.TB": { name: "Tambov Oblast", aliases: ["tambov"] },
+            "RU.TT": { name: "Tatarstan", aliases: ["republic of tatarstan"] },
+            "RU.TO": { name: "Tomsk Oblast", aliases: ["tomsk"] },
+            "RU.TL": { name: "Tula Oblast", aliases: ["tula"] },
+            "RU.TV": { name: "Tver Oblast", aliases: ["tver"] },
+            "RU.TU": { name: "Tuva", aliases: ["tyva", "republic of tuva"] },
+            "RU.TY": { name: "Tyumen Oblast", aliases: ["tyumen"] },
+            "RU.UD": { name: "Udmurtia", aliases: ["udmurt republic", "udmurt"] },
+            "RU.UL": { name: "Ulyanovsk Oblast", aliases: ["ulyanovsk"] },
+            "RU.VL": { name: "Vladimir Oblast", aliases: ["vladimir"] },
+            "RU.VG": { name: "Volgograd Oblast", aliases: ["volgograd"] },
+            "RU.VO": { name: "Vologda Oblast", aliases: ["vologda"] },
+            "RU.VR": { name: "Voronezh Oblast", aliases: ["voronezh"] },
+            "RU.YN": { name: "Yamalo-Nenets Autonomous Okrug", aliases: ["yamalo nenets", "yamalo-nenets", "ynao"] },
+            "RU.YS": { name: "Yaroslavl Oblast", aliases: ["yaroslavl"] },
+            "RU.CT": { name: "Zabaykalsky Krai", aliases: ["zabaykalsky", "transbaikal", "chita"] }
+        };
+
+        // ── Game Configurations ──
+        const GAMES = {
+            world: {
+                name: 'World',
+                label: 'Countries',
+                placeholder: 'Type a country name and press Enter...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+                objectKey: 'countries',
+                makeProjection: () => d3.geoNaturalEarth1(),
+                fitTarget: { type: "Sphere" },
+                showOcean: true,
+                idPad: 3,
+                excludedIds: new Set(["010"]),
+                leaderboardKey: 'mapQuizLeaderboard',
+                items: WORLD_ITEMS
+            },
+            northAmerica: {
+                name: 'North America',
+                label: 'Countries',
+                placeholder: 'Type a country name and press Enter...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+                objectKey: 'countries',
+                makeProjection: () => d3.geoNaturalEarth1(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 3,
+                excludedIds: new Set(),
+                includeIds: new Set(["044","084","124","188","192","214","222","304","320","332","340","388","484","558","591","630","780","840"]),
+                leaderboardKey: 'mapQuizLeaderboard_northAmerica',
+                items: WORLD_ITEMS
+            },
+            southAmerica: {
+                name: 'South America',
+                label: 'Countries',
+                placeholder: 'Type a country name and press Enter...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+                objectKey: 'countries',
+                makeProjection: () => d3.geoNaturalEarth1(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 3,
+                excludedIds: new Set(),
+                includeIds: new Set(["032","068","076","152","170","218","238","328","600","604","740","858","862"]),
+                leaderboardKey: 'mapQuizLeaderboard_southAmerica',
+                items: WORLD_ITEMS
+            },
+            europe: {
+                name: 'Europe',
+                label: 'Countries',
+                placeholder: 'Type a country name and press Enter...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+                objectKey: 'countries',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: { type: "Feature", geometry: { type: "MultiPoint", coordinates: [[-25,34],[50,72]] } },
+                showOcean: false,
+                idPad: 3,
+                excludedIds: new Set(),
+                includeIds: new Set(["008","040","056","070","100","112","191","196","203","208","233","246","250","276","300","348","352","372","380","428","440","442","498","499","528","578","616","620","642","643","688","703","705","724","752","756","804","807","826","-99"]),
+                leaderboardKey: 'mapQuizLeaderboard_europe',
+                items: WORLD_ITEMS
+            },
+            asia: {
+                name: 'Asia',
+                label: 'Countries',
+                placeholder: 'Type a country name and press Enter...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+                objectKey: 'countries',
+                makeProjection: () => d3.geoNaturalEarth1(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 3,
+                excludedIds: new Set(),
+                includeIds: new Set(["004","031","050","051","064","096","104","116","144","156","158","268","275","356","360","364","368","376","392","398","400","408","410","414","417","418","422","458","496","512","524","586","608","626","634","682","704","760","762","764","784","792","795","860","887"]),
+                leaderboardKey: 'mapQuizLeaderboard_asia',
+                items: WORLD_ITEMS
+            },
+            africa: {
+                name: 'Africa',
+                label: 'Countries',
+                placeholder: 'Type a country name and press Enter...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+                objectKey: 'countries',
+                makeProjection: () => d3.geoNaturalEarth1(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 3,
+                excludedIds: new Set(),
+                includeIds: new Set(["012","024","072","108","120","140","148","174","178","180","204","226","231","232","262","266","270","288","324","384","404","426","430","434","450","454","466","478","504","508","516","562","566","624","646","686","694","706","710","716","728","729","732","748","768","788","800","818","834","854","894"]),
+                leaderboardKey: 'mapQuizLeaderboard_africa',
+                items: WORLD_ITEMS
+            },
+            oceania: {
+                name: 'Oceania',
+                label: 'Countries',
+                placeholder: 'Type a country name and press Enter...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+                objectKey: 'countries',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: { type: "Feature", geometry: { type: "MultiPoint", coordinates: [[110,-48],[180,0]] } },
+                showOcean: false,
+                idPad: 3,
+                excludedIds: new Set(),
+                includeIds: new Set(["036","090","242","540","548","554","598"]),
+                leaderboardKey: 'mapQuizLeaderboard_oceania',
+                items: WORLD_ITEMS
+            },
+            canada: {
+                name: 'Canada',
+                label: 'Provinces',
+                placeholder: 'Type a province or territory name...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/@highcharts/map-collection/countries/ca/ca-all.topo.json',
+                objectKey: 'default',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(),
+                filterNullNames: true,
+                leaderboardKey: 'mapQuizLeaderboard_canada',
+                items: CANADA_ITEMS
+            },
+            australia: {
+                name: 'Australia',
+                label: 'States',
+                placeholder: 'Type a state or territory name...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/@highcharts/map-collection/countries/au/au-all.topo.json',
+                objectKey: 'default',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_australia',
+                items: AUSTRALIA_ITEMS
+            },
+            brazil: {
+                name: 'Brazil',
+                label: 'States',
+                placeholder: 'Type a state name...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/@highcharts/map-collection/countries/br/br-all.topo.json',
+                objectKey: 'default',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_brazil',
+                items: BRAZIL_ITEMS
+            },
+            mexico: {
+                name: 'Mexico',
+                label: 'States',
+                placeholder: 'Type a state name...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/@highcharts/map-collection/countries/mx/mx-all.topo.json',
+                objectKey: 'default',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(),
+                filterNullNames: true,
+                leaderboardKey: 'mapQuizLeaderboard_mexico',
+                items: MEXICO_ITEMS
+            },
+            germany: {
+                name: 'Germany',
+                label: 'States',
+                placeholder: 'Type a state name...',
+                dataUrl: 'https://cdn.jsdelivr.net/gh/AliceWi/TopoJSON-Germany/germany.json',
+                objectKey: 'states',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_germany',
+                items: GERMANY_ITEMS
+            },
+            france: {
+                name: 'France',
+                label: 'Regions',
+                placeholder: 'Type a region name...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/@highcharts/map-collection/countries/fr/fr-all.topo.json',
+                objectKey: 'default',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: { type: "Feature", geometry: { type: "MultiPoint", coordinates: [[-5, 41], [10, 51]] } },
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_france',
+                items: FRANCE_ITEMS
+            },
+            italy: {
+                name: 'Italy',
+                label: 'Regions',
+                placeholder: 'Type a region name...',
+                dataUrl: 'https://cdn.jsdelivr.net/gh/openpolis/geojson-italy/topojson/limits_IT_regions.topo.json',
+                objectKey: 'regions',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                idProperty: 'reg_istat_code',
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_italy',
+                items: ITALY_ITEMS
+            },
+            spain: {
+                name: 'Spain',
+                label: 'Communities',
+                placeholder: 'Type an autonomous community name...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/es-atlas/es/autonomous_regions.json',
+                objectKey: 'autonomous_regions',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(["20"]),
+                leaderboardKey: 'mapQuizLeaderboard_spain',
+                items: SPAIN_ITEMS
+            },
+            uk: {
+                name: 'United Kingdom',
+                label: 'Countries',
+                placeholder: 'Type a country name...',
+                dataUrl: 'https://cdn.jsdelivr.net/gh/ONSvisual/topojson_boundaries/geogALL2022UK.json',
+                objectKey: 'CTRY',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                idProperty: 'AREACD',
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_uk',
+                items: UK_ITEMS
+            },
+            india: {
+                name: 'India',
+                label: 'States',
+                placeholder: 'Type a state or territory name...',
+                dataUrl: 'https://cdn.jsdelivr.net/gh/udit-001/india-maps-data@main/topojson/india.json',
+                objectKey: 'states',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_india',
+                items: INDIA_ITEMS
+            },
+            japan: {
+                name: 'Japan',
+                label: 'Prefectures',
+                placeholder: 'Type a prefecture name...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/@highcharts/map-collection/countries/jp/jp-all.topo.json',
+                objectKey: 'default',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_japan',
+                items: JAPAN_ITEMS
+            },
+            china: {
+                name: 'China',
+                label: 'Provinces',
+                placeholder: 'Type a province name...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/cn-atlas/cn-atlas.json',
+                objectKey: 'provinces',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 0,
+                idProperty: 'id',
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_china',
+                items: CHINA_ITEMS
+            },
+            russia: {
+                name: 'Russia',
+                label: 'Subjects',
+                placeholder: 'Type a federal subject name...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/@highcharts/map-collection/countries/ru/ru-all.topo.json',
+                objectKey: 'default',
+                makeProjection: () => d3.geoMercator(),
+                fitTarget: { type: "Feature", geometry: { type: "MultiPoint", coordinates: [[27, 41], [180, 78]] } },
+                showOcean: false,
+                idPad: 0,
+                excludedIds: new Set(),
+                filterNullNames: true,
+                leaderboardKey: 'mapQuizLeaderboard_russia',
+                items: RUSSIA_ITEMS
+            },
+            usa: {
+                name: 'USA',
+                label: 'States',
+                placeholder: 'Type a state name and press Enter...',
+                dataUrl: 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json',
+                objectKey: 'states',
+                makeProjection: () => d3.geoAlbersUsa(),
+                fitTarget: null,
+                showOcean: false,
+                idPad: 2,
+                excludedIds: new Set(),
+                leaderboardKey: 'mapQuizLeaderboard_usa',
+                items: {
+                    "01": { name: "Alabama", aliases: ["al"] },
+                    "02": { name: "Alaska", aliases: ["ak"] },
+                    "04": { name: "Arizona", aliases: ["az"] },
+                    "05": { name: "Arkansas", aliases: ["ar"] },
+                    "06": { name: "California", aliases: ["ca", "cali"] },
+                    "08": { name: "Colorado", aliases: ["co"] },
+                    "09": { name: "Connecticut", aliases: ["ct"] },
+                    "10": { name: "Delaware", aliases: ["de"] },
+                    "11": { name: "District of Columbia", aliases: ["dc", "washington dc", "washington d c"] },
+                    "12": { name: "Florida", aliases: ["fl", "fla"] },
+                    "13": { name: "Georgia", aliases: ["ga"] },
+                    "15": { name: "Hawaii", aliases: ["hi"] },
+                    "16": { name: "Idaho", aliases: ["id"] },
+                    "17": { name: "Illinois", aliases: ["il"] },
+                    "18": { name: "Indiana", aliases: ["in"] },
+                    "19": { name: "Iowa", aliases: ["ia"] },
+                    "20": { name: "Kansas", aliases: ["ks"] },
+                    "21": { name: "Kentucky", aliases: ["ky"] },
+                    "22": { name: "Louisiana", aliases: ["la"] },
+                    "23": { name: "Maine", aliases: ["me"] },
+                    "24": { name: "Maryland", aliases: ["md"] },
+                    "25": { name: "Massachusetts", aliases: ["ma", "mass"] },
+                    "26": { name: "Michigan", aliases: ["mi", "mich"] },
+                    "27": { name: "Minnesota", aliases: ["mn", "minn"] },
+                    "28": { name: "Mississippi", aliases: ["ms", "miss"] },
+                    "29": { name: "Missouri", aliases: ["mo"] },
+                    "30": { name: "Montana", aliases: ["mt", "mont"] },
+                    "31": { name: "Nebraska", aliases: ["ne", "neb"] },
+                    "32": { name: "Nevada", aliases: ["nv", "nev"] },
+                    "33": { name: "New Hampshire", aliases: ["nh"] },
+                    "34": { name: "New Jersey", aliases: ["nj"] },
+                    "35": { name: "New Mexico", aliases: ["nm"] },
+                    "36": { name: "New York", aliases: ["ny"] },
+                    "37": { name: "North Carolina", aliases: ["nc"] },
+                    "38": { name: "North Dakota", aliases: ["nd"] },
+                    "39": { name: "Ohio", aliases: ["oh"] },
+                    "40": { name: "Oklahoma", aliases: ["ok", "okla"] },
+                    "41": { name: "Oregon", aliases: ["or", "ore"] },
+                    "42": { name: "Pennsylvania", aliases: ["pa", "penn"] },
+                    "44": { name: "Rhode Island", aliases: ["ri"] },
+                    "45": { name: "South Carolina", aliases: ["sc"] },
+                    "46": { name: "South Dakota", aliases: ["sd"] },
+                    "47": { name: "Tennessee", aliases: ["tn", "tenn"] },
+                    "48": { name: "Texas", aliases: ["tx", "tex"] },
+                    "49": { name: "Utah", aliases: ["ut"] },
+                    "50": { name: "Vermont", aliases: ["vt"] },
+                    "51": { name: "Virginia", aliases: ["va"] },
+                    "53": { name: "Washington", aliases: ["wa", "wash"] },
+                    "54": { name: "West Virginia", aliases: ["wv", "w virginia"] },
+                    "55": { name: "Wisconsin", aliases: ["wi", "wis", "wisc"] },
+                    "56": { name: "Wyoming", aliases: ["wy", "wyo"] }
+                }
+            }
+        };
+
+        // ── Utilities ──
+        function normalize(str) {
+            return str.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ');
+        }
+
+        function padId(id, len) {
+            if (!len) return String(id);
+            const s = String(id);
+            if (s.startsWith('-')) return s;
+            return s.padStart(len, '0');
+        }
+
+        function getFeatureId(f, game) {
+            if (game.idProperty) return String(f.properties[game.idProperty]);
+            return padId(f.id, game.idPad);
+        }
+
+        // ── Game State ──
+        let currentGameKey = 'world';
+        let currentGame = GAMES.world;
+        let nameLookup = {};
+        let totalItems = 0;
+        let featureIds = new Set();
+        let gameActive = false;
+        let guessedIds = new Set();
+        let score = 0;
+        let timerInterval = null;
+        let timeRemaining = 1200;
+        let flashTimeout = null;
+        let currentTimeTaken = 0;
+
+        // ── DOM ──
+        const input = document.getElementById('guess-input');
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const startBtn = document.getElementById('start-btn');
+        const mapContainer = document.getElementById('map-container');
+        const guessedList = document.getElementById('guessed-list');
+        const guessedHeader = document.getElementById('guessed-header');
+        const missedSection = document.getElementById('missed-section');
+        const missedList = document.getElementById('missed-list');
+        const modal = document.getElementById('modal');
+
+        // ── Menu ──
+        function toggleMenu() {
+            document.getElementById('menu-drawer').classList.toggle('open');
+            document.getElementById('menu-overlay').classList.toggle('open');
+        }
+
+        function closeMenu() {
+            document.getElementById('menu-drawer').classList.remove('open');
+            document.getElementById('menu-overlay').classList.remove('open');
+        }
+
+        function switchGame(key) {
+            if (key === currentGameKey) { closeMenu(); return; }
+            if (gameActive) stopGame();
+            closeMenu();
+            closeModal();
+            disableTooltips();
+            document.getElementById('progress-bar').style.width = '0%';
+            mapContainer.style.display = 'none';
+            guessedList.innerHTML = '';
+            guessedHeader.style.display = 'none';
+            missedSection.style.display = 'none';
+            missedList.innerHTML = '';
+            startBtn.disabled = true;
+            startBtn.textContent = 'Loading...';
+            document.querySelectorAll('.menu-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.game === key);
+            });
+            loadGame(key);
+        }
+
+        // ── Load Game ──
+        async function loadGame(key) {
+            currentGameKey = key;
+            currentGame = GAMES[key];
+            nameLookup = {};
+            totalItems = 0;
+            featureIds = new Set();
+
+            document.title = `${currentGame.name} Map Quiz`;
+            input.placeholder = currentGame.placeholder;
+            guessedHeader.textContent = `Guessed ${currentGame.label}`;
+            document.getElementById('missed-header').textContent = `Missed ${currentGame.label}`;
+
+            // Remove old map SVG
+            const oldSvg = mapContainer.querySelector(':scope > svg');
+            if (oldSvg) oldSvg.remove();
+
+            const response = await fetch(currentGame.dataUrl);
+            const topoData = await response.json();
+            const features = topojson.feature(topoData, topoData.objects[currentGame.objectKey]);
+
+            // Filter features for continent quizzes
+            if (currentGame.includeIds) {
+                features.features = features.features.filter(f =>
+                    currentGame.includeIds.has(getFeatureId(f, currentGame))
+                );
+            }
+
+            // Filter null-name features (Highcharts data has placeholder geometries)
+            if (currentGame.filterNullNames) {
+                const np = currentGame.nameProperty || 'name';
+                features.features = features.features.filter(f => f.properties[np] != null);
+            }
+
+            // Collect feature IDs
+            features.features.forEach(f => {
+                featureIds.add(getFeatureId(f, currentGame));
+            });
+
+            // Build name lookup
+            featureIds.forEach(id => {
+                if (currentGame.excludedIds.has(id)) return;
+                const entry = currentGame.items[id];
+                if (entry) {
+                    nameLookup[normalize(entry.name)] = id;
+                    entry.aliases.forEach(a => { nameLookup[normalize(a)] = id; });
+                    totalItems++;
+                }
+            });
+
+            scoreEl.textContent = `0/${totalItems}`;
+            timeRemaining = 1200;
+            updateTimer();
+
+            // Render map
+            const width = 960;
+            const height = currentGame.showOcean ? 500 : 600;
+            const pad = currentGame.fitTarget ? 20 : 0;
+            const projection = currentGame.makeProjection();
+
+            if (currentGame.fitTarget) {
+                projection.fitExtent([[pad, pad], [width - pad, height - pad]], currentGame.fitTarget);
+            } else {
+                projection.fitSize([width, height], features);
+            }
+
+            const path = d3.geoPath(projection);
+
+            const svg = d3.select('#map-container')
+                .append('svg')
+                .attr('viewBox', `0 0 ${width} ${height}`)
+                .attr('preserveAspectRatio', 'xMidYMid meet');
+
+            // Clip path to hide overflow (e.g. Russia's far east in Europe view)
+            svg.append('defs').append('clipPath').attr('id', 'map-clip')
+                .append('rect').attr('width', width).attr('height', height);
+
+            // Background (ocean sphere for world, plain rect for others)
+            if (currentGame.showOcean) {
+                // added inside g so it's behind regions
+            } else {
+                svg.append('rect')
+                    .attr('width', width)
+                    .attr('height', height)
+                    .attr('fill', '#b8d4e3');
+            }
+
+            const g = svg.append('g').attr('clip-path', 'url(#map-clip)');
+
+            if (currentGame.showOcean) {
+                g.append('path')
+                    .datum({ type: "Sphere" })
+                    .attr('d', path)
+                    .attr('fill', '#b8d4e3')
+                    .attr('stroke', '#8aacbf')
+                    .attr('stroke-width', 1);
+            }
+
+            // Regions
+            g.selectAll('.region')
+                .data(features.features)
+                .join('path')
+                .attr('class', d => {
+                    const id = getFeatureId(d, currentGame);
+                    return currentGame.excludedIds.has(id) ? 'region excluded' : 'region';
+                })
+                .attr('d', path)
+                .attr('data-id', d => getFeatureId(d, currentGame));
+
+            // Borders
+            const meshFilter = currentGame.includeIds
+                ? (a, b) => a !== b && (
+                    currentGame.includeIds.has(getFeatureId(a, currentGame)) ||
+                    currentGame.includeIds.has(getFeatureId(b, currentGame)))
+                : (a, b) => a !== b;
+            g.append('path')
+                .datum(topojson.mesh(topoData, topoData.objects[currentGame.objectKey], meshFilter))
+                .attr('fill', 'none')
+                .attr('stroke', '#888')
+                .attr('stroke-width', 0.5)
+                .attr('stroke-linejoin', 'round')
+                .attr('d', path);
+
+            // Zoom & pan (Ctrl/Cmd+scroll to zoom; regular scroll passes through)
+            const zoom = d3.zoom()
+                .scaleExtent([1, 12])
+                .filter(event => {
+                    if (event.type === 'wheel') return event.ctrlKey || event.metaKey;
+                    return !event.button;
+                })
+                .on('zoom', (event) => { g.attr('transform', event.transform); });
+
+            svg.call(zoom);
+            window._mapSvg = svg;
+            window._mapZoom = zoom;
+
+            mapContainer.style.display = 'block';
+            startBtn.disabled = false;
+            startBtn.textContent = 'START';
+        }
+
+        // ── Game Flow ──
+        function startGame() {
+            gameActive = true;
+            guessedIds.clear();
+            score = 0;
+            timeRemaining = 1200;
+
+            input.disabled = false;
+            input.value = '';
+            input.focus();
+
+            startBtn.textContent = 'STOP';
+            startBtn.classList.add('stop');
+
+            guessedList.innerHTML = '';
+            guessedHeader.style.display = 'none';
+            missedSection.style.display = 'none';
+            missedList.innerHTML = '';
+
+            d3.selectAll('.region:not(.excluded)').classed('guessed', false);
+            disableTooltips();
+            updateProgressBar();
+
+            scoreEl.textContent = `0/${totalItems}`;
+            updateTimer();
+
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateTimer();
+                if (timeRemaining <= 0) stopGame();
+            }, 1000);
+        }
+
+        function stopGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+
+            input.disabled = true;
+            startBtn.textContent = 'START';
+            startBtn.classList.remove('stop');
+
+            document.getElementById('final-score').textContent = `${score}/${totalItems}`;
+            const pct = totalItems > 0 ? Math.round(score / totalItems * 100) : 0;
+            let msg;
+            if (pct === 100) msg = 'Perfect score! You are a geography master!';
+            else if (pct >= 80) msg = 'Excellent work!';
+            else if (pct >= 60) msg = 'Great effort! Keep it up!';
+            else if (pct >= 40) msg = 'Good start! Try again to improve!';
+            else msg = 'Keep practicing!';
+            document.getElementById('modal-message').textContent = msg;
+
+            currentTimeTaken = 1200 - timeRemaining;
+            const nameEntry = document.getElementById('name-entry');
+            if (score > 0 && qualifiesForLeaderboard(score, currentTimeTaken)) {
+                nameEntry.style.display = 'block';
+                document.getElementById('name-input').value = '';
+            } else {
+                nameEntry.style.display = 'none';
+            }
+            renderLeaderboard(-1);
+
+            modal.classList.add('active');
+            if (nameEntry.style.display === 'block') {
+                document.getElementById('name-input').focus();
+            }
+
+            // Confetti for great scores
+            if (pct >= 80) launchConfetti();
+
+            // Enable tooltips on map
+            enableTooltips();
+
+            // Missed items
+            const missed = [];
+            featureIds.forEach(id => {
+                if (currentGame.excludedIds.has(id) || guessedIds.has(id)) return;
+                const entry = currentGame.items[id];
+                if (entry) missed.push(entry.name);
+            });
+            if (missed.length > 0) {
+                missed.sort();
+                missed.forEach(name => {
+                    const div = document.createElement('div');
+                    div.className = 'missed-name';
+                    div.textContent = name;
+                    missedList.appendChild(div);
+                });
+                missedSection.style.display = 'block';
+            }
+        }
+
+        function closeModal() { modal.classList.remove('active'); }
+
+        function resetZoom() {
+            if (window._mapSvg && window._mapZoom) {
+                window._mapSvg.transition().duration(500).call(window._mapZoom.transform, d3.zoomIdentity);
+            }
+        }
+
+        // ── Leaderboard ──
+        function getLeaderboard() {
+            try {
+                return JSON.parse(localStorage.getItem(currentGame.leaderboardKey)) || [];
+            } catch { return []; }
+        }
+
+        function saveLeaderboard(board) {
+            localStorage.setItem(currentGame.leaderboardKey, JSON.stringify(board));
+        }
+
+        function qualifiesForLeaderboard(items, timeTaken) {
+            const board = getLeaderboard();
+            if (board.length < 10) return true;
+            const worst = board[board.length - 1];
+            if (items > worst.countries) return true;
+            if (items === worst.countries && timeTaken < worst.timeTaken) return true;
+            return false;
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function renderLeaderboard(highlightIndex) {
+            const board = getLeaderboard();
+            const container = document.getElementById('leaderboard');
+            if (board.length === 0) {
+                container.innerHTML = '<h3>Leaderboard</h3><div class="empty-msg">No scores yet</div>';
+                return;
+            }
+            let html = '<h3>Leaderboard</h3><table><tr><th>#</th><th>Name</th><th>Score</th><th>Time</th></tr>';
+            board.forEach((entry, i) => {
+                const cls = i === highlightIndex ? ' class="highlight"' : '';
+                html += `<tr${cls}><td>${i + 1}</td><td>${escapeHtml(entry.name)}</td><td>${entry.countries}/${entry.total}</td><td>${formatTime(entry.timeTaken)}</td></tr>`;
+            });
+            html += '</table>';
+            container.innerHTML = html;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function saveScore() {
+            const nameInput = document.getElementById('name-input');
+            const name = nameInput.value.trim() || 'Anonymous';
+            const entry = { name, countries: score, total: totalItems, timeTaken: currentTimeTaken };
+
+            const board = getLeaderboard();
+            let insertAt = board.findIndex(e =>
+                entry.countries > e.countries ||
+                (entry.countries === e.countries && entry.timeTaken < e.timeTaken)
+            );
+            if (insertAt === -1) insertAt = board.length;
+            board.splice(insertAt, 0, entry);
+            if (board.length > 10) board.length = 10;
+            saveLeaderboard(board);
+
+            document.getElementById('name-entry').style.display = 'none';
+            renderLeaderboard(insertAt);
+        }
+
+        // ── Input Handling ──
+        input.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            if (!gameActive) return;
+
+            const guess = normalize(input.value);
+            if (!guess) return;
+
+            const id = nameLookup[guess];
+            if (id === undefined) {
+                input.classList.remove('shake');
+                void input.offsetWidth;
+                input.classList.add('shake');
+                setTimeout(() => input.classList.remove('shake'), 400);
+                return;
+            }
+
+            if (guessedIds.has(id)) {
+                flashInput('#f39c12');
+                input.value = '';
+                return;
+            }
+
+            guessedIds.add(id);
+            score++;
+
+            const regions = d3.selectAll(`.region[data-id="${id}"]`);
+            regions.classed('guessed', true).classed('flash', true);
+            setTimeout(() => regions.classed('flash', false), 600);
+            scoreEl.textContent = `${score}/${totalItems}`;
+            updateProgressBar();
+            addToGuessedList(currentGame.items[id].name);
+            flashInput('#27ae60');
+            input.value = '';
+
+            if (score === totalItems) stopGame();
+        });
+
+        function flashInput(color) {
+            clearTimeout(flashTimeout);
+            input.style.borderColor = color;
+            input.style.background = color === '#27ae60' ? '#eafaf1' : '#fef9e7';
+            flashTimeout = setTimeout(() => {
+                input.style.borderColor = '#3498db';
+                input.style.background = '';
+            }, 300);
+        }
+
+        function updateProgressBar() {
+            const pct = totalItems > 0 ? (score / totalItems) * 100 : 0;
+            document.getElementById('progress-bar').style.width = pct + '%';
+        }
+
+        // ── Confetti ──
+        function launchConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const ctx = canvas.getContext('2d');
+            const colors = ['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6','#e67e22','#1abc9c','#ff6b81'];
+            const pieces = [];
+            for (let i = 0; i < 150; i++) {
+                pieces.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    w: Math.random() * 10 + 5,
+                    h: Math.random() * 6 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: Math.random() * 3 + 2,
+                    rot: Math.random() * Math.PI * 2,
+                    rv: (Math.random() - 0.5) * 0.2,
+                    opacity: 1
+                });
+            }
+            let frame = 0;
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let alive = false;
+                pieces.forEach(p => {
+                    if (p.opacity <= 0) return;
+                    alive = true;
+                    p.x += p.vx;
+                    p.vy += 0.05;
+                    p.y += p.vy;
+                    p.rot += p.rv;
+                    if (frame > 100) p.opacity -= 0.02;
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot);
+                    ctx.globalAlpha = Math.max(0, p.opacity);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                    ctx.restore();
+                });
+                frame++;
+                if (alive) requestAnimationFrame(draw);
+                else ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            draw();
+        }
+
+        // ── Tooltips (after game ends) ──
+        let tooltipEl = null;
+        function enableTooltips() {
+            tooltipEl = document.createElement('div');
+            tooltipEl.className = 'region-tooltip';
+            tooltipEl.style.display = 'none';
+            document.getElementById('map-container').appendChild(tooltipEl);
+
+            d3.selectAll('.region:not(.excluded)').on('mouseenter', function(event) {
+                const id = this.getAttribute('data-id');
+                const entry = currentGame.items[id];
+                if (!entry) return;
+                const isGuessed = d3.select(this).classed('guessed');
+                if (!isGuessed) d3.select(this).classed('missed-hover', true);
+                tooltipEl.textContent = entry.name;
+                tooltipEl.style.display = 'block';
+            }).on('mousemove', function(event) {
+                const container = document.getElementById('map-container');
+                const rect = container.getBoundingClientRect();
+                tooltipEl.style.left = (event.clientX - rect.left) + 'px';
+                tooltipEl.style.top = (event.clientY - rect.top) + 'px';
+            }).on('mouseleave', function() {
+                d3.select(this).classed('missed-hover', false);
+                tooltipEl.style.display = 'none';
+            });
+        }
+
+        function disableTooltips() {
+            if (tooltipEl) { tooltipEl.remove(); tooltipEl = null; }
+            d3.selectAll('.region:not(.excluded)').on('mouseenter', null).on('mousemove', null).on('mouseleave', null);
+        }
+
+        function addToGuessedList(name) {
+            guessedHeader.style.display = 'block';
+            const items = [...guessedList.children];
+            const div = document.createElement('div');
+            div.className = 'guessed-name';
+            div.textContent = name;
+
+            const insertBefore = items.find(item => item.textContent.localeCompare(name) > 0);
+            if (insertBefore) {
+                guessedList.insertBefore(div, insertBefore);
+            } else {
+                guessedList.appendChild(div);
+            }
+        }
+
+        function updateTimer() {
+            const mins = Math.floor(timeRemaining / 60);
+            const secs = timeRemaining % 60;
+            timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+            timerEl.classList.toggle('warning', timeRemaining < 60);
+        }
+
+        document.getElementById('name-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); saveScore(); }
+        });
+
+        startBtn.addEventListener('click', () => {
+            if (gameActive) stopGame();
+            else startGame();
+        });
+
+        // ── Init ──
+        loadGame('world');
+    </script>
+</body>
+</html>

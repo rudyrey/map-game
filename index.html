@@ -499,6 +499,117 @@
             padding: 12px;
             font-style: italic;
         }
+
+        /* ── Mobile Responsive ── */
+        @media (max-width: 600px) {
+            .header {
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 8px 12px;
+            }
+
+            #guess-input {
+                order: 2;
+                min-width: 0;
+                width: 100%;
+                flex-basis: 100%;
+                font-size: 16px; /* prevents iOS zoom on focus */
+            }
+
+            .header-stats {
+                gap: 10px;
+            }
+
+            .stat-value {
+                font-size: 15px;
+            }
+
+            .header-divider {
+                display: none;
+            }
+
+            #start-btn {
+                padding: 6px 16px;
+                font-size: 12px;
+            }
+
+            #hamburger {
+                padding: 10px 8px;
+            }
+
+            #menu-drawer {
+                width: min(280px, 85vw);
+                left: calc(-1 * min(280px, 85vw));
+            }
+
+            #map-container {
+                padding: 8px;
+            }
+
+            #map-container > svg {
+                max-height: calc(100vh - 120px);
+            }
+
+            #reset-view {
+                width: 30px;
+                height: 30px;
+                top: 6px;
+                right: 6px;
+            }
+
+            #reset-view svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            .modal {
+                padding: 20px;
+                width: 95%;
+            }
+
+            .modal h2 {
+                font-size: 22px;
+            }
+
+            .modal .final-score {
+                font-size: 40px;
+                margin: 12px 0;
+            }
+
+            .modal .modal-message {
+                font-size: 15px;
+            }
+
+            #name-input {
+                width: 100%;
+            }
+
+            #name-entry .name-row {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            #name-entry .name-row button {
+                width: 100%;
+            }
+
+            .leaderboard table {
+                font-size: 12px;
+            }
+
+            #guessed-section {
+                padding: 12px 16px 16px;
+            }
+
+            #missed-section {
+                padding: 0 16px 16px;
+            }
+
+            #guessed-list,
+            #missed-list {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            }
+        }
     </style>
 </head>
 <body>

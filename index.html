@@ -872,8 +872,9 @@
                     "716": { name: "Zimbabwe", aliases: [] },
                     "807": { name: "North Macedonia", aliases: ["macedonia", "fyrom"] },
                     "010": { name: "Antarctica", aliases: [] },
-                    "-99": { name: "Kosovo", aliases: [] },
+                    "Kosovo": { name: "Kosovo", aliases: [] },
                     "174": { name: "Comoros", aliases: [] },
+                    "Somaliland": { name: "Somaliland", aliases: [] },
                     "020": { name: "Andorra", aliases: [] },
                     "028": { name: "Antigua and Barbuda", aliases: ["antigua"] },
                     "048": { name: "Bahrain", aliases: [] },
@@ -1336,7 +1337,7 @@
                 dataUrl: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json',
                 objectKey: 'countries',
                 makeProjection: () => d3.geoNaturalEarth1(),
-                fitTarget: null,
+                fitTarget: { type: "Feature", geometry: { type: "MultiPoint", coordinates: [[-170, 7], [-50, 84]] } },
                 showOcean: false,
                 idPad: 3,
                 excludedIds: new Set(),
@@ -1370,7 +1371,7 @@
                 showOcean: false,
                 idPad: 3,
                 excludedIds: new Set(),
-                includeIds: new Set(["008","040","056","070","100","112","191","196","203","208","233","246","250","276","300","348","352","372","380","428","440","442","498","499","528","578","616","620","642","643","688","703","705","724","752","756","804","807","826","-99","020","438","470","492","674"]),
+                includeIds: new Set(["008","040","056","070","100","112","191","196","203","208","233","246","250","276","300","348","352","372","380","428","440","442","498","499","528","578","616","620","642","643","688","703","705","724","752","756","804","807","826","Kosovo","020","438","470","492","674"]),
                 leaderboardKey: 'mapQuizLeaderboard_europe',
                 items: WORLD_ITEMS
             },
@@ -1400,7 +1401,7 @@
                 showOcean: false,
                 idPad: 3,
                 excludedIds: new Set(),
-                includeIds: new Set(["012","024","072","108","120","140","148","174","178","180","204","226","231","232","262","266","270","288","324","384","404","426","430","434","450","454","466","478","504","508","516","562","566","624","646","686","694","706","710","716","728","729","732","748","768","788","800","818","834","854","894","132","480","678","690"]),
+                includeIds: new Set(["012","024","072","108","120","140","148","174","178","180","204","226","231","232","262","266","270","288","324","384","404","426","430","434","450","454","466","478","504","508","516","562","566","624","646","686","694","706","710","716","728","729","732","748","768","788","800","818","834","854","894","132","480","678","690","Somaliland"]),
                 leaderboardKey: 'mapQuizLeaderboard_africa',
                 items: WORLD_ITEMS
             },
@@ -1689,6 +1690,7 @@
 
         function getFeatureId(f, game) {
             if (game.idProperty) return String(f.properties[game.idProperty]);
+            if (f.id == null) return f.properties?.name || 'unknown';
             return padId(f.id, game.idPad);
         }
 
